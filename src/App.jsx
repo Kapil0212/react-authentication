@@ -1,32 +1,43 @@
-import React, { useState } from 'react';
-import { useAuth } from './AuthContext';
+import React, { useEffect, useState } from 'react';
 
 const API_KEY = import.meta.env.VITE_FIREBASE_API_KEY;
+const FIVE_MINUTES = 5 * 60 * 1000;
 
 function App() {
-  const {
-    token,
-    login,
-    logout,
-    isLoggedIn,
-  } = useAuth();
-
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(false);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const [newPassword, setNewPassword] = useState('');
-
   const [isLoading, setIsLoading] = useState(false);
-  const [isPasswordLoading, setIsPasswordLoading] =
-    useState(false);
-
   const [error, setError] = useState('');
-  const [passwordError, setPasswordError] =
-    useState('');
 
-  const handleAuthSubmit = async (event) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Check whether the stored login session is still valid
+  useEffect(() => {
+    const token = localStorage.getItem('idToken');
+    const loginTime = localStorage.getItem('loginTime');
+
+    if (!token || !loginTime) {
+      return;
+    }
+
+    const currentTime = Date.now();
+    const elapsedTime = currentTime - Number(loginTime);
+
+    if (elapsedTime >= FIVE_MINUTES) {
+      localStorage.removeItem('idToken');
+      localStorage.removeItem('loginTime');
+
+      setIsAuthenticated(false);
+      alert('Session expired. Please login again.');
+    } else {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     setIsLoading(true);
@@ -39,11 +50,9 @@ function App() {
     try {
       const response = await fetch(url, {
         method: 'POST',
-
         headers: {
           'Content-Type': 'application/json',
         },
-
         body: JSON.stringify({
           email,
           password,
@@ -57,115 +66,44 @@ function App() {
 
       if (!response.ok) {
         throw new Error(
-          data?.error?.message ||
-            'Authentication failed'
+          data?.error?.message || 'Authentication failed'
         );
       }
 
       if (isLogin) {
-        console.log(
-          'JWT / idToken:',
-          data.idToken
-        );
+        console.log('JWT / idToken:', data.idToken);
 
-        login(data.idToken);
+        // Store token
+        localStorage.setItem('idToken', data.idToken);
+
+        // Store login time
+        localStorage.setItem('loginTime', Date.now().toString());
+
+        setIsAuthenticated(true);
 
         alert('Login successful');
       } else {
         alert('Account created successfully');
-
-        setIsLogin(true);
       }
 
       setEmail('');
       setPassword('');
       setError('');
     } catch (error) {
-      console.error(
-        'Authentication Error:',
-        error
-      );
-
+      console.error('Authentication Error:', error);
       setError(error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleChangePassword = async (event) => {
-    event.preventDefault();
-
-    setPasswordError('');
-
-    if (newPassword.length < 6) {
-      setPasswordError(
-        'Password must be at least 6 characters'
-      );
-
-      return;
-    }
-
-    setIsPasswordLoading(true);
-
-    try {
-      const response = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${API_KEY}`,
-        {
-          method: 'POST',
-
-          headers: {
-            'Content-Type': 'application/json',
-          },
-
-          body: JSON.stringify({
-            idToken: token,
-            password: newPassword,
-            returnSecureToken: true,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      console.log(
-        'Password Update Response:',
-        data
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          data?.error?.message ||
-            'Unable to change password'
-        );
-      }
-
-      // Firebase gives us a new idToken
-      // after changing the password.
-      login(data.idToken);
-
-      setNewPassword('');
-
-      alert('Password changed successfully');
-    } catch (error) {
-      console.error(
-        'Password Update Error:',
-        error
-      );
-
-      setPasswordError(error.message);
-    } finally {
-      setIsPasswordLoading(false);
-    }
-  };
-
   const handleLogout = () => {
-    logout();
+    localStorage.removeItem('idToken');
+    localStorage.removeItem('loginTime');
 
+    setIsAuthenticated(false);
     setEmail('');
     setPassword('');
-    setNewPassword('');
-    setError('');
-    setPasswordError('');
 
     alert('Logged out successfully');
   };
@@ -187,8 +125,6 @@ function App() {
   return (
     <div className="page">
 
-      {/* NAVBAR */}
-
       <nav className="navbar">
 
         <div className="brand">
@@ -197,187 +133,140 @@ function App() {
 
         <div className="nav-links">
 
-          {!isLoggedIn && (
-            <button
-              className="nav-button"
-              onClick={switchToLogin}
-            >
-              Login
-            </button>
-          )}
-
-          {isLoggedIn && (
+          {!isAuthenticated && (
             <>
-              <button className="nav-button">
-                Profile
+              <button
+                className="nav-button"
+                onClick={switchToLogin}
+              >
+                Login
               </button>
 
               <button
-                className="logout-button"
-                onClick={handleLogout}
+                className="nav-button"
+                onClick={switchToSignup}
               >
-                Logout
+                Sign Up
               </button>
             </>
+          )}
+
+          {isAuthenticated && (
+            <button
+              className="logout-button"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
           )}
 
         </div>
 
       </nav>
 
-      {/* LOGGED OUT */}
+      <section className="auth-card">
 
-      {!isLoggedIn ? (
+        {isAuthenticated ? (
+          <>
+            <h1>Welcome!</h1>
 
-        <section className="auth-card">
+            <p style={{ textAlign: 'center' }}>
+              You are successfully logged in.
+            </p>
 
-          <h1>
-            {isLogin ? 'Login' : 'Sign Up'}
-          </h1>
-
-          <form onSubmit={handleAuthSubmit}>
-
-            <label htmlFor="email">
-              Your Email
-            </label>
-
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(event) =>
-                setEmail(event.target.value)
-              }
-              required
-            />
-
-            <label htmlFor="password">
-              Your Password
-            </label>
-
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) =>
-                setPassword(event.target.value)
-              }
-              minLength="6"
-              required
-            />
-
-            {error && (
-              <div className="error-box">
-                {error}
-              </div>
-            )}
-
-            {isLoading ? (
-
-              <button
-                type="button"
-                className="submit-button"
-                disabled
-              >
-                <span className="spinner"></span>
-                Sending request...
-              </button>
-
-            ) : (
-
-              <button
-                type="submit"
-                className="submit-button"
-              >
-                {isLogin
-                  ? 'Login'
-                  : 'Create Account'}
-              </button>
-
-            )}
+            <p style={{ textAlign: 'center' }}>
+              Your session will expire after 5 minutes.
+            </p>
 
             <button
-              type="button"
-              className="existing-account"
-              onClick={
-                isLogin
-                  ? switchToSignup
-                  : switchToLogin
-              }
+              className="submit-button"
+              onClick={handleLogout}
             >
-              {isLogin
-                ? 'Create a new account'
-                : 'Login with existing account'}
+              Logout
             </button>
+          </>
+        ) : (
+          <>
+            <h1>
+              {isLogin ? 'Login' : 'Sign Up'}
+            </h1>
 
-          </form>
+            <form onSubmit={handleSubmit}>
 
-        </section>
+              <label htmlFor="email">
+                Your Email
+              </label>
 
-      ) : (
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) =>
+                  setEmail(event.target.value)
+                }
+                required
+              />
 
-        /* PROFILE / CHANGE PASSWORD */
+              <label htmlFor="password">
+                Your Password
+              </label>
 
-        <section className="profile-card">
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) =>
+                  setPassword(event.target.value)
+                }
+                minLength="6"
+                required
+              />
 
-          <h1>Your User Profile</h1>
+              {error && (
+                <div className="error-box">
+                  {error}
+                </div>
+              )}
 
-          <form
-            onSubmit={handleChangePassword}
-            className="password-form"
-          >
-
-            <label htmlFor="newPassword">
-              New Password
-            </label>
-
-            <input
-              id="newPassword"
-              type="password"
-              value={newPassword}
-              onChange={(event) =>
-                setNewPassword(
-                  event.target.value
-                )
-              }
-              placeholder="Enter new password"
-              minLength="6"
-              required
-            />
-
-            {passwordError && (
-              <div className="error-box">
-                {passwordError}
-              </div>
-            )}
-
-            {isPasswordLoading ? (
+              {isLoading ? (
+                <button
+                  type="button"
+                  className="submit-button"
+                  disabled
+                >
+                  <span className="spinner"></span>
+                  Sending request...
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="submit-button"
+                >
+                  {isLogin
+                    ? 'Login'
+                    : 'Create Account'}
+                </button>
+              )}
 
               <button
                 type="button"
-                className="change-password-button"
-                disabled
+                className="existing-account"
+                onClick={
+                  isLogin
+                    ? switchToSignup
+                    : switchToLogin
+                }
               >
-                <span className="spinner"></span>
-                Updating...
+                {isLogin
+                  ? 'Create a new account'
+                  : 'Login with existing account'}
               </button>
 
-            ) : (
+            </form>
+          </>
+        )}
 
-              <button
-                type="submit"
-                className="change-password-button"
-              >
-                Change Password
-              </button>
-
-            )}
-
-          </form>
-
-        </section>
-
-      )}
+      </section>
 
     </div>
   );
