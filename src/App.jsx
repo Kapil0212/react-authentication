@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React,  { useState } from 'react';
+import  { useAuth } from './AuthContext';
 
 const API_KEY = import.meta.env.VITE_FIREBASE_API_KEY;
 
 function App() {
-  const [isLogin, setIsLogin] = useState(false);
+  const { login, logout, isLoggedIn } = useAuth();
+
+  const [isLogin, setIsLogin] = useState(true);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,7 +50,8 @@ function App() {
       if (isLogin) {
         console.log('JWT / idToken:', data.idToken);
 
-        localStorage.setItem('idToken', data.idToken);
+        // Store token in Context
+        login(data.idToken);
 
         alert('Login successful');
       } else {
@@ -65,130 +69,164 @@ function App() {
     }
   };
 
-  const switchToLogin = () => {
-    setIsLogin(true);
-    setError('');
+  const handleLogout = () => {
+    logout();
     setEmail('');
     setPassword('');
-  };
+    setError('');
 
-  const switchToSignup = () => {
-    setIsLogin(false);
-    setError('');
-    setEmail('');
-    setPassword('');
+    alert('Logged out successfully');
   };
 
   return (
     <div className="page">
+
+      {/* NAVBAR */}
       <nav className="navbar">
+
         <div className="brand">
           React Auth
         </div>
 
         <div className="nav-links">
-          <button
-            className="nav-button"
-            onClick={switchToLogin}
-          >
-            Login
-          </button>
+
+          {!isLoggedIn && (
+            <button
+              className="nav-button"
+              onClick={() => {
+                setIsLogin(true);
+                setError('');
+              }}
+            >
+              Login
+            </button>
+          )}
+
+          {isLoggedIn && (
+            <>
+              <button className="nav-button">
+                Profile
+              </button>
+
+              <button
+                className="logout-button"
+                onClick={handleLogout}
+              >
+                Logout
+              </button>
+            </>
+          )}
+
+        </div>
+
+      </nav>
+
+      {/* MAIN CONTENT */}
+
+      {!isLoggedIn ? (
+        <section className="auth-card">
+
+          <h1>
+            {isLogin ? 'Login' : 'Sign Up'}
+          </h1>
+
+          <form onSubmit={handleSubmit}>
+
+            <label htmlFor="email">
+              Your Email
+            </label>
+
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(event) =>
+                setEmail(event.target.value)
+              }
+              required
+            />
+
+            <label htmlFor="password">
+              Your Password
+            </label>
+
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(event) =>
+                setPassword(event.target.value)
+              }
+              minLength="6"
+              required
+            />
+
+            {error && (
+              <div className="error-box">
+                {error}
+              </div>
+            )}
+
+            {isLoading ? (
+              <button
+                type="button"
+                className="submit-button"
+                disabled
+              >
+                <span className="spinner"></span>
+                Sending request...
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="submit-button"
+              >
+                {isLogin
+                  ? 'Login'
+                  : 'Create Account'}
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="existing-account"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setError('');
+              }}
+            >
+              {isLogin
+                ? 'Create a new account'
+                : 'Login with existing account'}
+            </button>
+
+          </form>
+
+        </section>
+      ) : (
+        <section className="profile-card">
+
+          <h1>Welcome!</h1>
+
+          <p>
+            You are successfully logged in.
+          </p>
+
+          <p className="logged-message">
+            Your authentication token is stored
+            securely in the Auth Context.
+          </p>
 
           <button
-            className="nav-button"
-            onClick={switchToSignup}
-          >
-            Sign Up
-          </button>
-
-          <button
-            className="logout-button"
-            onClick={() => {
-              localStorage.removeItem('idToken');
-              alert('Logged out');
-            }}
+            className="logout-main-button"
+            onClick={handleLogout}
           >
             Logout
           </button>
-        </div>
-      </nav>
 
-      <section className="auth-card">
-        <h1>
-          {isLogin ? 'Login' : 'Sign Up'}
-        </h1>
+        </section>
+      )}
 
-        <form onSubmit={handleSubmit}>
-          <label htmlFor="email">
-            Your Email
-          </label>
-
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(event) =>
-              setEmail(event.target.value)
-            }
-            required
-          />
-
-          <label htmlFor="password">
-            Your Password
-          </label>
-
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(event) =>
-              setPassword(event.target.value)
-            }
-            minLength="6"
-            required
-          />
-
-          {error && (
-            <div className="error-box">
-              {error}
-            </div>
-          )}
-
-          {isLoading ? (
-            <button
-              type="button"
-              className="submit-button"
-              disabled
-            >
-              <span className="spinner"></span>
-              Sending request...
-            </button>
-          ) : (
-            <button
-              type="submit"
-              className="submit-button"
-            >
-              {isLogin
-                ? 'Login'
-                : 'Create Account'}
-            </button>
-          )}
-
-          <button
-            type="button"
-            className="existing-account"
-            onClick={
-              isLogin
-                ? switchToSignup
-                : switchToLogin
-            }
-          >
-            {isLogin
-              ? 'Create a new account'
-              : 'Login with existing account'}
-          </button>
-        </form>
-      </section>
     </div>
   );
 }

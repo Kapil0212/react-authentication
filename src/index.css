@@ -40,16 +40,13 @@ input {
   gap: 28px;
 }
 
-.nav-button,
-.existing-account {
+.nav-button {
   border: 0;
   background: transparent;
   color: #fff;
   cursor: pointer;
-}
-
-.nav-button {
   font-weight: 700;
+  font-size: 16px;
 }
 
 .logout-button {
@@ -62,7 +59,8 @@ input {
   cursor: pointer;
 }
 
-.auth-card {
+.auth-card,
+.profile-card {
   width: min(420px, calc(100% - 32px));
   margin: 55px auto;
   background: #4b006e;
@@ -71,7 +69,8 @@ input {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
-.auth-card h1 {
+.auth-card h1,
+.profile-card h1 {
   text-align: center;
   font-size: 25px;
   margin: 0 0 26px;
@@ -127,7 +126,10 @@ input {
 .existing-account {
   margin: 5px auto 0;
   font-size: 14px;
-  opacity: 0.9;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
 }
 
 .error-box {
@@ -155,6 +157,30 @@ input {
   }
 }
 
+.profile-card {
+  text-align: center;
+}
+
+.profile-card p {
+  font-size: 18px;
+}
+
+.logged-message {
+  font-size: 14px !important;
+  opacity: 0.85;
+}
+
+.logout-main-button {
+  margin-top: 15px;
+  padding: 10px 25px;
+  border: 2px solid #fff;
+  border-radius: 5px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+}
+
 @media (max-width: 600px) {
   .navbar {
     padding: 0 18px;
@@ -164,15 +190,8 @@ input {
     font-size: 21px;
   }
 
-  .nav-links {
-    gap: 10px;
-  }
-
-  .nav-button {
-    display: none;
-  }
-
-  .auth-card {
+  .auth-card,
+  .profile-card {
     margin-top: 30px;
     padding: 26px 22px;
   }
